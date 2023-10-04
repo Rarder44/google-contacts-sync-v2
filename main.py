@@ -13,7 +13,7 @@ from Google.SyncManager import SyncManager
 import os
 
 from Utils.Logger import log
-
+import argparse
 
 
 #creare una key di autenticazione ad un servizio 
@@ -33,11 +33,33 @@ from Utils.Logger import log
         #inserire gli account mail da sincronizzare
 
         
+def arguments():
+    # parse command line
+    p = argparse.ArgumentParser(
+        description="""
+    Sync google contacts.
+
+    For full instructions see
+    https://github.com/Rarder44/google-contacts-sync-v2
+        """,
+        epilog="""""",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    p.add_argument("--desync", action="store_true", help="Removes the synchronization tag from groups and contacts")
+    p.add_argument("-f", "--file", action="store_true", help="Save output to file")
+    return p.parse_args()
+
 
 
 def main():
     configFile="config.ini"
+
+    args=arguments()
+    if args.file:
+        log.filename="LOG.txt"
+
     
+
 
     #carico la configurazione
     log("carico la configurazione da ",configFile)
@@ -62,8 +84,11 @@ def main():
     log.addIndentation(-1)
     log("dati scaricati!")
 
-
-    #syncManager.deSync()
+    if args.desync:
+        log("deSync: rimozione dei tag da gruppi e contatti...")
+        syncManager.deSync()
+        log("deSync: done!")
+        exit()
 
     #TEST:DEBUG - crea 1000 contatti casuali dentro il primo account
     #for i in range(1000):
@@ -106,10 +131,6 @@ def main():
 
     configurations.save()
     
-
-
-
-
 
 
 if __name__ == "__main__":

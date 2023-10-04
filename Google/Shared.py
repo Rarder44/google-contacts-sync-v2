@@ -1,7 +1,7 @@
 class Shared:
     # The user field that we store a key in to uniquely identify a person across
     # accounts
-    SYNC_TAG = 'csync-uid'
+    SYNC_TAG = 'SyncTag-gcs2'       #GoogleContactsSync v2
 
     # If modifying these scopes, delete the file token.pickle.
     SCOPES = ['https://www.googleapis.com/auth/contacts']
