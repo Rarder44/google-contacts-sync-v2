@@ -192,7 +192,7 @@ class Account:
 
         gToUpdate:Group
         for gToUpdate in self.SyncListGroups.toUpdate:
-            if( gToUpdate.name in allGroupsName):
+            if( gToUpdate.originalName!= gToUpdate.name and  gToUpdate.name in allGroupsName):
                 #modifico temporaneamente il nome
                 tmp = Group.fromGoogleObj(gToUpdate.cloneBody(),self)
                 tmp.name=tmp.syncTag

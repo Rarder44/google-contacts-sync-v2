@@ -404,6 +404,8 @@ class SyncManager:
 
 
     def deSync(self):
+        log("deSync: rimozione dei tag da gruppi e contatti...")
+
         """rimuove tutti i syncTag da tutti i contatti e gruppi"""
         a:Account
         for a in self.accounts:
@@ -420,6 +422,8 @@ class SyncManager:
         for a in self.accounts:
             a.applySyncListGroups()
             a.applySyncListContacts()
+
+        log("deSync: done!")
 
 
     def newSyncTag(self):

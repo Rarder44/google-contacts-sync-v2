@@ -18,6 +18,7 @@ class Group:
         self.account:Account.Account=account
         self.__body:dict =None
         self.updateTime=None
+        self.originalName=None
 
 
     def __strip_body(body):
@@ -42,8 +43,10 @@ class Group:
             #tmp=datetime.strptime(googleObj["metadata"]["updateTime"], '%Y-%m-%dT%H:%M:%S.%fZ')    #funziona ma non compatibile con altre date usate nel codice
             tmp=dateutil.parser.isoparse(googleObj["metadata"]["updateTime"])
             g.updateTime= tmp
-
+            
         g.__body=Group.__strip_body(googleObj)
+        g.originalName=g.name
+
         return g
     def fromResourceName(resourceName,account) :
         p = account.GoogleService.contactGroups().get(
