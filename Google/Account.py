@@ -17,7 +17,10 @@ import google.auth.exceptions
 
 
 class Account:
-    def __init__(self,GoogleAPIjson_path, user):
+    def __init__(self,GoogleAPIjson_path, user,JSON=None):
+        """
+        JSON = oggetto json che se impostato previene il download dei dati dal server ed inizializza le SyncList in modo da applicare direttamente un backup
+        """
 
         self.user=user
         self.contacts=[]
@@ -65,8 +68,11 @@ class Account:
 
         self.GoogleService = build('people', 'v1', credentials=creds)
 
-        self.pullContacts()
-        self.pullGroups()
+        if JSON!=None:
+            self.__importJSON(JSON)
+        else:
+            self.pullContacts()
+            self.pullGroups()
 
 
 
@@ -292,4 +298,31 @@ class Account:
                     ]
                 }
             ).execute()
+
+
+    def exportJSON(self):
+        """crea un json che contiene tutti i dati necessari per un backup"""
+
+    def __importJSON(self,JSON):
+        """dato il json( backup ) ad inizializzare le SyncList """
+
+        #controllo se è un backup specifico ( con i resource name ) o generico ( solo syncTag)
+        
+        #generico
+        #   cancello tutti i dati presenti sull'account
+        #   sincronizzo tutti i gruppi ( popolo la SyncListGroup.toAdd e applico )
+        #   prendo i gruppi appena inseriti
+        #   sincronizzo tutti i contatti con relativi gruppi di appartenenza ( popolo la SyncListContacts.toAdd e applico )
+
+        #specifico??? 
+
+        #ci può essere inconsistenza! se ho un elemento con lo stesso SyncTag sia su server che su backup ma hanno resourceName differenti??
+        # pulisco tutto ???
+        #oppure
+        #   creo un account temnporano con le stesse credenziali, come appoggio per ottenere e gestire i dati su server
+        #   trovo:
+        #    - i dati che ci sono già su server e vanno "aggiornati" ( uso il resourceName )
+        #    - i dati che vanno cancellati su server
+        #    - i dati che vanno inseriti su server
+        
 

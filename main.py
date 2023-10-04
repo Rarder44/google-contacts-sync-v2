@@ -34,6 +34,14 @@ import argparse
 
         
 def arguments():
+
+    def is_valid_file(parser, arg):
+        if not os.path.exists(arg):
+            parser.error("The file %s does not exist!" % arg)
+        else:
+            return open(arg, 'r')  # return an open file handle
+        
+
     # parse command line
     p = argparse.ArgumentParser(
         description="""
@@ -46,7 +54,8 @@ def arguments():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     p.add_argument("--desync", action="store_true", help="Removes the synchronization tag from groups and contacts")
-    p.add_argument("-f", "--file", action="store_true", help="Save output to file")
+    p.add_argument("--file", action="store_true", help="Save output to file")
+    p.add_argument("-restore", dest="restore_filename", required=False,help="Backup file path to be applied", metavar="BACKUP_FILE_PATH",type=lambda x: is_valid_file(p, x))
     return p.parse_args()
 
 
@@ -59,7 +68,11 @@ def main():
         log.filename="LOG.txt"
 
     
-
+    if args.restore_filename!=None:
+        #leggo il backup
+        #cancello tutti i dati in tutti gli account
+        #applico il backup a tutti gli account
+        pass
 
     #carico la configurazione
     log("carico la configurazione da ",configFile)
