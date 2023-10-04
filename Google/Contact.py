@@ -1,7 +1,6 @@
 import json
 import copy
 import re
-from datetime import datetime
 from Google.Shared import Shared
 import Google.Account
 import dateutil.parser

@@ -63,7 +63,7 @@ def main():
     log("dati scaricati!")
 
 
-    syncManager.deSync()
+    #syncManager.deSync()
 
     #TEST:DEBUG - crea 1000 contatti casuali dentro il primo account
     #for i in range(1000):
