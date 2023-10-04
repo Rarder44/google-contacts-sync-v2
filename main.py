@@ -45,6 +45,9 @@ def main():
     os.makedirs(confDir, mode=0o755, exist_ok=True)
     confFile = confDir / configFile
     configurations = ConfigManager(confFile)
+    if not configurations.isLoaded:
+        exit()
+
 
     log("ultima esecuzione ",configurations.getLastExecution())
 
@@ -58,6 +61,9 @@ def main():
         syncManager.addAccount(Account(configurations.getAPI_JSON_path(), mail))
     log.addIndentation(-1)
     log("dati scaricati!")
+
+
+    syncManager.deSync()
 
     #TEST:DEBUG - crea 1000 contatti casuali dentro il primo account
     #for i in range(1000):
@@ -87,15 +93,15 @@ def main():
     log.addIndentation(-1)
     log("fine sincronizzazione gruppi")
 
-    
-    log("inizio sincronizzazione foto...")
-    log.addIndentation(1)
+    if configurations.data["DEFAULT"]["photo_sync"]:
+        log("inizio sincronizzazione foto...")
+        log.addIndentation(1)
 
-    syncManager.force_syncPhotos()
+        syncManager.force_syncPhotos()
 
-    log.addIndentation(-1)
-    log("fine sincronizzazione foto")
-    
+        log.addIndentation(-1)
+        log("fine sincronizzazione foto")
+        
 
 
     configurations.save()

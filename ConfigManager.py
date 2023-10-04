@@ -3,11 +3,12 @@ import configparser
 import datetime,pytz, dateutil
 import dateutil.parser
 
+from  Utils.Logger import log
 class ConfigManager:
     def __init__(self,configFilePath :pathlib.Path | str):
         self.path=configFilePath
         self.data=[]
-        self.load()
+        self.isLoaded=self.load()
 
     
     def save(self):
@@ -26,14 +27,16 @@ class ConfigManager:
         
 
         if not self.path.exists():
-            self.data = configparser.ConfigParser()
+            self.data = configparser.ConfigParser(allow_no_value=True)
 
-            
             self.data["DEFAULT"] = {
-                "msg": "You need an account section for each user, please setup",
-                "last": "1970-01-01:T00:00:00+00.00",
-                "backupdays": 0,
-                "keyfile": f"{self.path.parent}/FIXME_keyfile.json",
+                ";You need an account section for each user, please setup":"",
+                "last": "1970-01-01T00:00:00.00+00:00",
+                ";0 = backup disabled | 1 or more = backup number that are kept":"",
+                "backup_history": 0,
+                "APIjson_path": f"{self.path.parent}/GoogleAPI.json",
+                ";Enable or disable the synchronization of profile photos":"",
+                "photo_sync":True
             }
             self.data["account-1-FIXME"] = {
                 "user": "FIXME@gmail.com",
@@ -45,13 +48,13 @@ class ConfigManager:
             with open(self.path, "w") as cfh:
                 self.data.write(cfh)
 
-            print(f"Made config file {self.path}, you must edit it")
+            log(f"Made config file {self.path}, you must edit it")
             return False
 
         self.data = configparser.ConfigParser()
         self.data.read(self.path)
-        if "account-FIXME" in self.data.sections():
-            print(f"You must edit {self.path}.  There is an account-FIXME section")
+        if "account-1-FIXME" in self.data.sections() or "account-2-FIXME" in self.data.sections():
+            log(f"You must edit {self.path}.  There is an account-FIXME section")
             return False
 
 
@@ -67,7 +70,7 @@ class ConfigManager:
         if "DEFAULT" in self.data and  "last" in self.data["DEFAULT"]:
             return dateutil.parser.isoparse(self.data["DEFAULT"]["last"])
         
-        return dateutil.parser.isoparse("1970-01-01:T00:00:00+00.00") 
+        return dateutil.parser.isoparse("1970-01-01T00:00:00.00+00:00") 
     
     def getAPI_JSON_path(self):
         return self.data["DEFAULT"]["APIjson_path"]
