@@ -189,3 +189,13 @@ class Group:
     @name.setter
     def name(self, val):
         self.__body["name"]=val
+
+
+
+
+    def exportJSON(self):
+        """crea un json object che contiene tutti i dati necessari per un backup"""
+        obj=   {"body":self.__body,"updateTime":self.updateTime.isoformat()}
+
+        return obj
+        

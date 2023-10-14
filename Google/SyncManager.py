@@ -364,17 +364,8 @@ class SyncManager:
                 log(master.name ," (",master.account.user,")-> ",master.photo)
                 if master.photo:            #se la foto c'è -> settala
                     
-                    #google usa un metodo suo per definire la dimensione della foto da visualizzare ( non è un parametro )
-                    #alla fine dell'url c'è un = con "S" e la dimensione.
-                    #mettendo un numero molto più grande della dimensione viene ritornata l'immagine a dimensione reale
-                    #tolgo quindi qualsiasi cosa che c'è dopo l'uguale e ci metto "s10000"
-                    equal_position = master.photo.find("=")
-                    assert equal_position != -1,"= non trovato, nuova struttura dell'url di google?? "+master.photo
-                    urlFullSize = master.photo[:equal_position + 1]+"s10000"
-
-                                        
-                    response = requests.get(urlFullSize)       #prendo la foto a dimensione "grande" TODO: parso l'url e modifico il parametro in corretto
-                    image_bytes = bytearray(response.content)       #recupero l'array di byte
+                    image_bytes =  master.photoBytes
+                    assert image_bytes != None,"= non trovato, nuova struttura dell'url di google?? "+master.photo
 
                     otherContact = contactsSorted[1:]               #prendo tutti gli altri contatti associati
                     contact:Contact

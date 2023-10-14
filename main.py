@@ -14,7 +14,8 @@ import os
 
 from Utils.Logger import log
 import argparse
-
+import json
+import pathlib
 
 #creare una key di autenticazione ad un servizio 
     #vai qua -> https://console.cloud.google.com/projectselector2/iam-admin/serviceaccounts?supportedpurview=project&authuser=4
@@ -141,6 +142,15 @@ def main():
         log("fine sincronizzazione foto")
         
 
+    #TODO: creo un backupManager
+    jsonOut= syncManager.accounts[0].exportJSON(True)
+    p="backups/b1.txt"
+    path= pathlib.Path(p)
+    if not os.path.exists(path.parent):
+        os.makedirs(path.parent)
+    f = open(path, "w")
+    f.write(json.dumps(jsonOut))
+    f.close()
 
     configurations.save()
     

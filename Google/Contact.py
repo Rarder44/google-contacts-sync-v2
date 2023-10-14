@@ -5,7 +5,7 @@ from Google.Shared import Shared
 import Google.Account
 import dateutil.parser
 import base64
-
+import requests
 from  Utils.Utils import EqualsTree
 
 class Contact:
@@ -364,6 +364,37 @@ class Contact:
         
         return self.__body["photos"][0]["url"]
 
+    @property 
+    def photoBytes(self):
+
+        #google usa un metodo suo per definire la dimensione della foto da visualizzare ( non è un parametro )
+        #alla fine dell'url c'è un = con "S" e la dimensione.
+        #mettendo un numero molto più grande della dimensione viene ritornata l'immagine a dimensione reale
+        #tolgo quindi qualsiasi cosa che c'è dopo l'uguale e ci metto "s10000"
+
+        if not self.photo:
+            return None
+        equal_position = self.photo.find("=")
+        if equal_position == -1:
+            return None
+        urlFullSize = self.photo[:equal_position + 1]+"s10000"      
+        response = requests.get(urlFullSize)       #prendo la foto a dimensione "grande" TODO: parso l'url e modifico il parametro in corretto
+        return bytearray(response.content)       #recupero l'array di byte
+        
+
+    def exportJSON(self,includeImage=False):
+        """crea un json object che contiene tutti i dati necessari per un backup"""
+
+        obj=   {"body":self.__body,"updateTime":self.updateTime.isoformat()}
+        if includeImage:
+            _bytes= self.photoBytes
+            if _bytes:
+                obj["photoBytes"]=base64.b64encode(_bytes).decode('utf-8')
+
+        return obj
+        
+
+        
 
 
     def __str__(self) -> str:

@@ -12,7 +12,7 @@ from googleapiclient.errors import HttpError
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 import google.auth.exceptions
-
+import json
 
 
 
@@ -300,8 +300,13 @@ class Account:
             ).execute()
 
 
-    def exportJSON(self):
-        """crea un json che contiene tutti i dati necessari per un backup"""
+    def exportJSON(self,includeImage=False):
+        """crea un json object che contiene tutti i dati necessari per un backup"""
+        obj={
+                "groups":[ g.exportJSON() for g in self.groups],
+                "contacts":[ c.exportJSON(includeImage) for c in self.contacts]
+            }
+        return obj
 
     def __importJSON(self,JSON):
         """dato il json( backup ) ad inizializzare le SyncList """
@@ -325,4 +330,6 @@ class Account:
         #    - i dati che vanno cancellati su server
         #    - i dati che vanno inseriti su server
         
+
+
 
