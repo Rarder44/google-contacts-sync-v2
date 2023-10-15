@@ -2,6 +2,7 @@
 #cosi trova le librerie della cartella Libs
 
 import pathlib
+from BackupManager import BackupManager
 from ConfigManager import ConfigManager
 
 
@@ -56,7 +57,8 @@ def arguments():
     )
     p.add_argument("--desync", action="store_true", help="Removes the synchronization tag from groups and contacts")
     p.add_argument("--file", action="store_true", help="Save output to file")
-    p.add_argument("-restore", dest="restore_filename", required=False,help="Backup file path to be applied", metavar="BACKUP_FILE_PATH",type=lambda x: is_valid_file(p, x))
+    p.add_argument("--only_backup", action="store_true", help="Read only operation, read all accounts and create a backup for each")
+    p.add_argument("--restore", dest="restore_filename", required=False,help="Backup file path to be applied", metavar="BACKUP_FILE_PATH",type=lambda x: is_valid_file(p, x))
     return p.parse_args()
 
 
@@ -69,11 +71,6 @@ def main():
         log.filename="LOG.txt"
 
     
-    if args.restore_filename!=None:
-        #leggo il backup
-        #cancello tutti i dati in tutti gli account
-        #applico il backup a tutti gli account
-        pass
 
     #carico la configurazione
     log("carico la configurazione da ",configFile)
@@ -83,21 +80,37 @@ def main():
     configurations = ConfigManager(confFile)
     if not configurations.isLoaded:
         exit()
+    syncManager = SyncManager(configurations)
+    backupManager = BackupManager(syncManager,configurations)
+    
 
 
     log("ultima esecuzione ",configurations.getLastExecution())
 
-
     #download contacts e gruppi
     log("scarico i dati... ")
     log.addIndentation(1)
-    syncManager = SyncManager(configurations)
+    
     for mail in configurations.getMails():
         log(mail,"...")
         syncManager.addAccount(Account(configurations.getAPI_JSON_path(), mail))
     log.addIndentation(-1)
     log("dati scaricati!")
 
+    #controllo se devo solo fare il backup
+    if args.only_backup:
+        log("inizio backup...")
+        backupManager.backup_all()
+        log("backup completato")
+        return
+    
+    #controllo se devo ripristinare
+    if args.restore_filename!=None:
+        backupManager.restore(args.restore_filename.name)
+        return
+    
+
+    #controllo se devo solo desincronizzare
     if args.desync:
         log("deSync: rimozione dei tag da gruppi e contatti...")
         syncManager.deSync()
@@ -141,17 +154,11 @@ def main():
         log.addIndentation(-1)
         log("fine sincronizzazione foto")
         
-
-    #TODO: creo un backupManager
-    jsonOut= syncManager.accounts[0].exportJSON(True)
-    p="backups/b1.txt"
-    path= pathlib.Path(p)
-    if not os.path.exists(path.parent):
-        os.makedirs(path.parent)
-    f = open(path, "w")
-    f.write(json.dumps(jsonOut))
-    f.close()
-
+    if  int(configurations.data["DEFAULT"]["backup_history"])>0:
+        log("inizio backup...")
+        backupManager.backup()
+        log("backup completato")
+   
     configurations.save()
     
 

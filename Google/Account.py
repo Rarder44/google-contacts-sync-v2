@@ -13,21 +13,27 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 import google.auth.exceptions
 import json
-
+import base64
 
 
 class Account:
+    
+    def __new__(cls,GoogleAPIjson_path, user,JSON=None):
+        instance = super().__new__(cls)
+        instance.contacts=[]
+        instance.groups=[]
+        instance.SyncListContacts=SynchronizationLists()
+        instance.SyncListGroups=SynchronizationLists()
+
+
+        return instance
+
     def __init__(self,GoogleAPIjson_path, user,JSON=None):
         """
         JSON = oggetto json che se impostato previene il download dei dati dal server ed inizializza le SyncList in modo da applicare direttamente un backup
         """
 
         self.user=user
-        self.contacts=[]
-        self.groups=[]
-
-        self.SyncListContacts=SynchronizationLists()
-        self.SyncListGroups=SynchronizationLists()
 
         creds = None
         GoogleAPIjson_path = pathlib.Path(GoogleAPIjson_path)
@@ -75,6 +81,23 @@ class Account:
             self.pullGroups()
 
 
+    def fromBackup(backupObj):
+        a=Account.__new__(Account,None,None,None) #non richiama la init
+
+        for g in backupObj["groups"]:
+            gg = Group.fromGoogleObj(g["body"],a)
+            a.groups.append(gg)
+            pass
+
+
+        for c in backupObj["contacts"]:
+            cc = Contact.fromGoogleObj(c["body"],a)
+            if "photoBytes" in c:
+                cc.photoCache = bytearray(base64.b64decode(c["photoBytes"]))
+            a.contacts.append(cc)
+            pass
+
+        return a
 
     def pullContacts(self):
         """scarica tutti i contatti dell'utente e se li salva internamente"""
@@ -167,9 +190,10 @@ class Account:
 
         self.batchRemoveContacts()
 
-
-        if self.SyncListContacts.countAll>0:
-            self.pullContacts()
+        #non lo faccio perchè se fatto troppo "preso" dopo un update o inserimento
+        # non vengono recuperati i nuovi dati
+        #if self.SyncListContacts.countAll>0:
+        #    self.pullContacts()
 
 
         self.SyncListContacts=SynchronizationLists()
@@ -219,9 +243,7 @@ class Account:
 
 
 
-        
 
-        
         if self.SyncListGroups.countAll>0:
             self.pullGroups()
 
@@ -239,7 +261,7 @@ class Account:
         for chunk in contactsChunked:
 
             contactsToUpdate = { contact.resourceName:contact.cloneBody() for contact in chunk }
-            self.GoogleService.people().batchUpdateContacts(
+            t=self.GoogleService.people().batchUpdateContacts(
                 body={
                     "updateMask":','.join(Shared.all_update_person_fields),
                     "readMask":','.join(Shared.all_person_fields),
@@ -248,9 +270,19 @@ class Account:
                     }
                 }
             ).execute()
+            for resourceName in t["updateResult"]:
+                #TODO: controllo se l'inserimento della persona è andato a buon fine!
+                # se non lo è, interrompo???
+                updateStatus=t["updateResult"][resourceName]
+                assert updateStatus["httpStatusCode"]==200,"Inserimento non andato a buon fine! Abort!"
+
+                
+                tmp=Contact.fromGoogleObj(updateStatus["person"],self)
+                old = self.getContactBySyncTag(tmp.syncTag)
+                old.copyFrom(tmp)
+                old.updateTime=tmp.updateTime
 
  
-            
         
 
     def batchRemoveContacts(self):
@@ -270,6 +302,9 @@ class Account:
                 }
             ).execute()
 
+            for rn in resourceNames:
+                self.contacts.remove(self.getContactByResourceName(rn))
+            
 
 
     def batchCreateContacts(self):
@@ -283,22 +318,35 @@ class Account:
             #tolgo i campi che non devo passare in fase di creazione
             cleanedContacts=[]
             for c in chunk:
-                keysToDelete=["photos","resourceName","etag"]
+                keysToDelete=["photos","resourceName","etag","coverPhotos"]
                 for k in keysToDelete:
                     if k in c:
                         c.pop(k)
                 cleanedContacts.append(c)
 
-            self.GoogleService.people().batchCreateContacts(
+            t = self.GoogleService.people().batchCreateContacts(
                 body={
-                    #"readMask":','.join(Shared.all_person_fields),
+                    "readMask":','.join(Shared.all_person_fields),
                     "contacts":[
                         #il formato fa schifo... ma è cosi...
                         *[ { "contactPerson":contact } for contact in cleanedContacts  ]
                     ]
                 }
             ).execute()
+            for insertStatus in t["createdPeople"]:
+                #TODO: controllo se l'inserimento della persona è andato a buon fine!
+                # se non lo è, interrompo???
+                assert insertStatus["httpStatusCode"]==200,"Inserimento non andato a buon fine! Abort!"
 
+                tmp=Contact.fromGoogleObj(insertStatus["person"],self)
+                self.contacts.append(tmp)
+
+
+
+            
+
+
+        #TODO: prendere i dati ricevuti ed applicarli alla lista di contacts
 
     def exportJSON(self,includeImage=False):
         """crea un json object che contiene tutti i dati necessari per un backup"""

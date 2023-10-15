@@ -13,6 +13,7 @@ class Contact:
         self.__body:dict =None
         self.account:Google.Account.Account=account
         self.updateTime=None
+        self.photoCache=None
         
 
     def __strip_body(body):
@@ -45,6 +46,14 @@ class Contact:
                     
                     if c.updateTime==None or tmp > c.updateTime:
                         c.updateTime= tmp
+
+        
+        try:
+            for p in googleObj["photos"]:
+                if p["metadata"]["source"]["type"]!='CONTACT':      #mi interessano solo le immagini settate da me, non dal profilo personale dell'utente
+                    googleObj["photos"].remove(p)
+        except:
+            pass #evito di controllare che esistano tutti i parametri...
 
         c.__body=Contact.__strip_body(googleObj)
 
@@ -372,14 +381,20 @@ class Contact:
         #mettendo un numero molto più grande della dimensione viene ritornata l'immagine a dimensione reale
         #tolgo quindi qualsiasi cosa che c'è dopo l'uguale e ci metto "s10000"
 
+
+        #quando la scarico una volta, me la tengo in cache cosi da non doverla riscaricare ( e mi da una mano per ripristinarla dai backup ) 
         if not self.photo:
             return None
-        equal_position = self.photo.find("=")
-        if equal_position == -1:
-            return None
-        urlFullSize = self.photo[:equal_position + 1]+"s10000"      
-        response = requests.get(urlFullSize)       #prendo la foto a dimensione "grande" TODO: parso l'url e modifico il parametro in corretto
-        return bytearray(response.content)       #recupero l'array di byte
+        
+        if not self.photoCache:
+            equal_position = self.photo.find("=")
+            if equal_position == -1:
+                return None
+            urlFullSize = self.photo[:equal_position + 1]+"s10000"      
+            response = requests.get(urlFullSize)       #prendo la foto a dimensione "grande" TODO: parso l'url e modifico il parametro in corretto
+            self.photoCache= bytearray(response.content)       #recupero l'array di byte
+        
+        return self.photoCache
         
 
     def exportJSON(self,includeImage=False):

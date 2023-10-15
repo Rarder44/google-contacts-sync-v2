@@ -5,13 +5,31 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Google sync",
+            "name": "Sync",
             "type": "python",
             "request": "launch",
             "program": "main.py",
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": []
-        }
+        },
+        {
+            "name": "Restore",
+            "type": "python",
+            "request": "launch",
+            "program": "main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": ["--restore","backups/luca.pozzi@istitutobrianteo.it.json"]
+        },
+        {
+            "name": "only backup",
+            "type": "python",
+            "request": "launch",
+            "program": "main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": ["--only_backup"]
+        },
     ]
 }

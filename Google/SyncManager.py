@@ -338,6 +338,10 @@ class SyncManager:
        
     def force_syncPhotos(self):
         """controlla per ogni contatto le foto se sono sincronizzate, OPERAZIONE LUNGA"""
+        #dalla data di modifica ( metadati ) non si capisce se è stata cambiata la foto oppure altro nel contatto
+        #quindi per qualsiasi modifica del contatto, occorre modificare le foto a tutti...
+
+        
         if len(self.accounts)<2:        #non dovrebbe mai succedere...
             return
         
@@ -413,6 +417,24 @@ class SyncManager:
             a.applySyncListContacts()
 
         
+    def removeAll(self,Security=False):
+        """ATTENZIONE! cancella tutti i contatti e gruppi da ogni account"""
+        assert Security, "La variabile di sicurezza non è stata settata!"
+
+        a:Account
+        for a in self.accounts:
+
+            for g in a.groups:
+                a.SyncListGroups.toRemove.append(g.syncTag)
+
+            for c in a.contacts:
+                a.SyncListContacts.toRemove.append(c.syncTag)
+            
+            a.applySyncListGroups()
+            a.applySyncListContacts()
+
+        
+
 
 
     def newSyncTag(self):
