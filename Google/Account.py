@@ -14,7 +14,7 @@ from google.auth.transport.requests import Request
 import google.auth.exceptions
 import json
 import base64
-
+from Utils.Logger import log
 
 class Account:
     
@@ -166,87 +166,138 @@ class Account:
 
 
     def applySyncListContacts(self):
-        #aggiorno
-        #cToUpdate:Contact
-        #for cToUpdate in self.SyncListContacts.toUpdate:
-        #    cToUpdate.update()
 
-        self.batchUpdateContacts()
+        
+        if self.SyncListContacts.countAll==0:
+            return
+    
+        log("Contacts...")
+        log.addIndentation(1)
+        
+        if len(self.SyncListContacts.toUpdate)>0:
+           
+            #aggiorno
+            #cToUpdate:Contact
+            #for cToUpdate in self.SyncListContacts.toUpdate:
+            #    cToUpdate.update()
+            log("update")
+            log.addIndentation(1)
+            self.batchUpdateContacts()
+            log.addIndentation(-1)
+
+        if len(self.SyncListContacts.toAdd)>0:
+            #aggiungo
+            #for cToAdd in self.SyncListContacts.toAdd:
+                #gToAdd è un body
+            #    tmp = Contact.create(cToAdd,self)
+
+            log("create")
+            log.addIndentation(1)
+            self.batchCreateContacts()
+            log.addIndentation(-1)
 
 
-        #aggiungo
-        #for cToAdd in self.SyncListContacts.toAdd:
-            #gToAdd è un body
-        #    tmp = Contact.create(cToAdd,self)
+        if len(self.SyncListContacts.toRemove)>0:
+            #cancello
+            #for cToRemove in self.SyncListContacts.toRemove:
+                #gToRemove è un syncTag
+            #    c = self.getContactBySyncTag(cToRemove)
+            #    if c:
+            #        c.delete()
 
-        self.batchCreateContacts()
+            log("remove")
+            log.addIndentation(1)
+            self.batchRemoveContacts()
+            log.addIndentation(-1)
 
-        #cancello
-        #for cToRemove in self.SyncListContacts.toRemove:
-            #gToRemove è un syncTag
-        #    c = self.getContactBySyncTag(cToRemove)
-        #    if c:
-        #        c.delete()
 
-        self.batchRemoveContacts()
-
-        #non lo faccio perchè se fatto troppo "preso" dopo un update o inserimento
+        #non lo faccio perchè se fatto troppo "presto" dopo un update o inserimento
         # non vengono recuperati i nuovi dati
         #if self.SyncListContacts.countAll>0:
         #    self.pullContacts()
 
-
+        log.addIndentation(-1)
         self.SyncListContacts=SynchronizationLists()
 
         
 
 
     def applySyncListGroups(self):
+        log("Groups...")
+        log.addIndentation(1)
 
-        #cancello
-        for gToRemove in self.SyncListGroups.toRemove:
-            #gToRemove è un syncTag
-            g = self.getGroupBySyncTag(gToRemove)
-            if g:
-                g.delete()
+        if len(self.SyncListGroups.toRemove)>0:
+            
+            #cancello
+            total=len(self.SyncListGroups.toRemove)
+            n=0
+            for gToRemove in self.SyncListGroups.toRemove:
+                #gToRemove è un syncTag
+                if gToRemove:
+                    g = self.getGroupBySyncTag(gToRemove)
+                    if not g: 
+                        g = self.getGroupByResourceName(gToRemove)        #se per caso non è un sync, controllo se un resourceName #TODO: c'è un modo migliore?
+                    
+                    n+=1
+                    log(f"remove {n}/{total}",end='\r')
+
+                    if g:
+                        g.delete()
+            log(f"remove {n}/{total}")
 
 
-        #aggiorno
-        #se ci sono rinominazioni a catena ( esempio nomi:   a -> b | b -> c | c -> a ) c'è un deathlock!
-        #quindi mi salvo in questo vettore tutti i gruppi che devo aggiornare in 2 fasi
-        # 1) gli do un nome temporaneo ( li chiamo come il synctag cosi so che è univoco)
-        # -) aggiorno tutti...
-        # 2) aggiorno quelli con il nome temporaneo con il vero nome
-        toUpdateLater=[]      
-        allGroupsName=[group.name for group in self.groups]
+        if len(self.SyncListGroups.toUpdate)>0:
+            #aggiorno
+            #se ci sono rinominazioni a catena ( esempio nomi:   a -> b | b -> c | c -> a ) c'è un deathlock!
+            #quindi mi salvo in questo vettore tutti i gruppi che devo aggiornare in 2 fasi
+            # 1) gli do un nome temporaneo ( li chiamo come il synctag cosi so che è univoco)
+            # -) aggiorno tutti...
+            # 2) aggiorno quelli con il nome temporaneo con il vero nome
 
-        gToUpdate:Group
-        for gToUpdate in self.SyncListGroups.toUpdate:
-            if( gToUpdate.originalName!= gToUpdate.name and  gToUpdate.name in allGroupsName):
-                #modifico temporaneamente il nome
-                tmp = Group.fromGoogleObj(gToUpdate.cloneBody(),self)
-                tmp.name=tmp.syncTag
-                tmp.update()
-                gToUpdate.etag=tmp.etag     #aggiorno l'etag per il successivo update
+            total=len(self.SyncListGroups.toUpdate)
+            n=0
 
-                toUpdateLater.append(gToUpdate)     #mi salvo per dopo il reale update
-            else:
+            toUpdateLater=[]      
+            allGroupsName=[group.name for group in self.groups]
+
+            gToUpdate:Group
+            for gToUpdate in self.SyncListGroups.toUpdate:
+                if( gToUpdate.originalName!= gToUpdate.name and  gToUpdate.name in allGroupsName):
+                    #modifico temporaneamente il nome
+                    tmp = Group.fromGoogleObj(gToUpdate.cloneBody(),self)
+                    tmp.name=tmp.syncTag
+                    tmp.update()
+                    gToUpdate.etag=tmp.etag     #aggiorno l'etag per il successivo update
+
+                    toUpdateLater.append(gToUpdate)     #mi salvo per dopo il reale update
+                else:
+                    gToUpdate.update()
+                    n+=1
+                    log(f"update {n}/{total}",end='\r')
+
+            for gToUpdate in toUpdateLater:     #aggiorno tutti quelli che mi sono tenuto da parte
                 gToUpdate.update()
-
-        for gToUpdate in toUpdateLater:     #aggiorno tutti quelli che mi sono tenuto da parte
-            gToUpdate.update()
-
-        #aggiungo
-        for gToAdd in self.SyncListGroups.toAdd:
-            #gToAdd è un body
-            tmp = Group.create(gToAdd,self)
+                n+=1
+                log(f"update {n}/{total}",end='\r')
+            log(f"update {n}/{total}")
 
 
+        if len(self.SyncListGroups.toAdd)>0:
+            #aggiungo   
+            total=len(self.SyncListGroups.toAdd)
+            n=0
+            for gToAdd in self.SyncListGroups.toAdd:
+                #gToAdd è un body
+                tmp = Group.create(gToAdd,self)
+                n+=1
+                log(f"create {n}/{total}",end='\r')
+            log(f"create {n}/{total}")
+
+            if self.SyncListGroups.countAll>0:
+                self.pullGroups()                   #TODO: controllo se davvero vengono ritornati! ( puo essere che non siano sincronizzati e devo usare i return delle funzioni)
 
 
-        if self.SyncListGroups.countAll>0:
-            self.pullGroups()
-
+        log.addIndentation(-1)
         self.SyncListGroups=SynchronizationLists()
             
 
@@ -258,9 +309,26 @@ class Account:
         chunkSize=150
         contactsChunked=[ l[i:i + chunkSize] for i in range(0, len(l), chunkSize) ]
 
+        numChunks=len(contactsChunked)
+        n=0
         for chunk in contactsChunked:
+            n+=1
+            log(f"chunk: {n}/{numChunks}",end='\r')
 
             contactsToUpdate = { contact.resourceName:contact.cloneBody() for contact in chunk }
+
+            for c in contactsToUpdate:
+                c = contactsToUpdate[c]
+                #rimuovo nomi gender e birthday duplicati
+                #prendo il primo ( credo che gli altri vengano presi dal dominio... quindi magari messi in automatico.. bho!)
+                if 'names' in c:
+                    c['names'] = [c['names'][0]]
+                if 'genders' in c:
+                    c['genders'] = [c['genders'][0]]
+                if "birthdays" in c:
+                    c["birthdays"] = [c["birthdays"][0]]
+
+
             t=self.GoogleService.people().batchUpdateContacts(
                 body={
                     "updateMask":','.join(Shared.all_update_person_fields),
@@ -281,7 +349,7 @@ class Account:
                 old = self.getContactBySyncTag(tmp.syncTag)
                 old.copyFrom(tmp)
                 old.updateTime=tmp.updateTime
-
+        log(f"chunk: {n}/{numChunks}")
  
         
 
@@ -291,9 +359,13 @@ class Account:
         chunkSize=400
         syncTagChunked=[ l[i:i + chunkSize] for i in range(0, len(l), chunkSize) ]
 
+        numChunks=len(syncTagChunked)
+        n=0
         for chunk in syncTagChunked:
+            n+=1
+            log(f"chunk: {n}/{numChunks}",end='\r')
 
-            resourceNames = [ c.resourceName for c in self.contacts if c.syncTag in chunk]
+            resourceNames = [ c.resourceName for c in self.contacts if c.syncTag in chunk or c.resourceName in chunk]       #l'or permette di passare anche i resourceName 
             self.GoogleService.people().batchDeleteContacts(
                 body={
                     "resourceNames":[
@@ -305,7 +377,7 @@ class Account:
             for rn in resourceNames:
                 self.contacts.remove(self.getContactByResourceName(rn))
             
-
+        log(f"chunk: {n}/{numChunks}")
 
     def batchCreateContacts(self):
         #la batch puo al massimo creare 200 contatti per singola request ( faccio 150 per sicurezza)
@@ -313,8 +385,11 @@ class Account:
         chunkSize=150
         contactsChunked=[ l[i:i + chunkSize] for i in range(0, len(l), chunkSize) ]
 
+        numChunks=len(contactsChunked)
+        n=0
         for chunk in contactsChunked:
-            
+            n+=1
+            log(f"chunk: {n}/{numChunks}",end='\r')
             #tolgo i campi che non devo passare in fase di creazione
             cleanedContacts=[]
             for c in chunk:
@@ -322,7 +397,19 @@ class Account:
                 for k in keysToDelete:
                     if k in c:
                         c.pop(k)
+
+                #rimuovo nomi gender e birthday duplicati
+                #prendo il primo ( credo che gli altri vengano presi dal dominio... quindi magari messi in automatico.. bho!)
+                if 'names' in c:
+                    c['names'] = [c['names'][0]]
+                if 'genders' in c:
+                    c['genders'] = [c['genders'][0]]
+                if "birthdays" in c:
+                    c["birthdays"] = [c["birthdays"][0]]
+                    
                 cleanedContacts.append(c)
+
+          
 
             t = self.GoogleService.people().batchCreateContacts(
                 body={
@@ -341,7 +428,7 @@ class Account:
                 tmp=Contact.fromGoogleObj(insertStatus["person"],self)
                 self.contacts.append(tmp)
 
-
+        log(f"chunk: {n}/{numChunks}")
 
             
 

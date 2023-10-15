@@ -421,17 +421,24 @@ class SyncManager:
         """ATTENZIONE! cancella tutti i contatti e gruppi da ogni account"""
         assert Security, "La variabile di sicurezza non è stata settata!"
 
+        log("remove all data from acconts...")
+        log.addIndentation(1)
         a:Account
         for a in self.accounts:
-
+            
+            log(a.user)
             for g in a.groups:
-                a.SyncListGroups.toRemove.append(g.syncTag)
+                a.SyncListGroups.toRemove.append(g.resourceName)            
 
             for c in a.contacts:
-                a.SyncListContacts.toRemove.append(c.syncTag)
+                a.SyncListContacts.toRemove.append(c.resourceName)
             
+            log.addIndentation(1)
             a.applySyncListGroups()
             a.applySyncListContacts()
+            log.addIndentation(-1)
+        log.addIndentation(-1)
+
 
         
 

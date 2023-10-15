@@ -1,12 +1,14 @@
 from ConfigManager import ConfigManager
 from Google.Account import Account
 from Google.Contact import Contact
+from Google.Group import Group
 from Google.SyncManager import SyncManager
 import pathlib
 import os
 import json
 import datetime,pytz
 import shutil
+from Utils.Logger import log
 class BackupManager:
     #TODO: LOG!!
 
@@ -95,20 +97,38 @@ class BackupManager:
         #creo un account "temporaneo" dove carico il backup
         #lo considero il "master" più aggiornato ( forzo la data di update? )
         master = Account.fromBackup(obj)
-        accounts=self.syncManager.accounts
+        accounts=self.syncManager.accounts      #prima prendo gli account (senza il master)
+        self.syncManager.addAccount(master) #poi lo aggiungo al syncManager cosi la "newSyncTag" evita di creare tag duplicati
 
+        
+        log("caricamento dei gruppi...")
+        log.addIndentation(1)
         #copio i groups
         for g in master.groups:
+            if not g.syncTag:
+                g.syncTag = self.syncManager.newSyncTag()
+
             account:Account
             for account in  accounts:
                 account.SyncListGroups.toAdd.append(g.cloneBody())
 
         for account in accounts:
+            log(account.user)
+            log.addIndentation(1)
             account.applySyncListGroups()
+            log.addIndentation(-1)
+
+        log.addIndentation(-1)
 
 
+        log("caricamento dei contatti...")
+        log.addIndentation(1)
         #copio i contacts
         for c in master.contacts:
+            if not c.syncTag:
+                c.syncTag = self.syncManager.newSyncTag()
+
+
             account:Account
             for account in accounts: 
                 #creo un Contact temporano con il body del nuovo contatto
@@ -119,17 +139,25 @@ class BackupManager:
                 account.SyncListContacts.toAdd.append(tmp.cloneBody())
 
         for account in accounts:
+            log(account.user)
+            log.addIndentation(1)
             account.applySyncListContacts()
+            log.addIndentation(-1)
+        log.addIndentation(-1)
+        
 
 
+        log("caricamento immagini...")
+        log.addIndentation(1)
         #sincronizzo le immagini
         for contact in master.contacts:
             if contact.photoCache:          #prendo tutti quelli che hanno una cache ( ovvero che l'immagine era salvata nel file )
                 for account in accounts:
                     cont = account.getContactBySyncTag(contact.syncTag)     #recupero il contatto dell'account tramite syncTag
                     cont.updatePhoto(contact.photoCache)                    #gli carico l'immagine
-                
+        log.addIndentation(-1)
 
+        
         
         self.configManager.save()       #aggiorno la data
         

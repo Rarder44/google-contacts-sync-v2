@@ -96,6 +96,12 @@ class Group:
         self.etag = c.etag
         
     def delete(self):
+        from googleapiclient.http import HttpRequest
+        def stuff(self):
+            print("ciao! ",self)
+        HttpRequest.stampati=stuff
+
+
         self.account.GoogleService.contactGroups().delete(
             resourceName=self.resourceName,
             deleteContacts=False            

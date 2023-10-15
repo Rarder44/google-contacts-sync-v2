@@ -49,9 +49,16 @@ class Contact:
 
         
         try:
+            photoClean=[]
             for p in googleObj["photos"]:
+                if "default" in p and p["default"]:     #ignoro le immagini di default
+                    continue
                 if p["metadata"]["source"]["type"]!='CONTACT':      #mi interessano solo le immagini settate da me, non dal profilo personale dell'utente
-                    googleObj["photos"].remove(p)
+                    continue
+
+                photoClean.append(p)
+
+            googleObj["photos"]=photoClean
         except:
             pass #evito di controllare che esistano tutti i parametri...
 
@@ -230,7 +237,8 @@ class Contact:
         
     def getGroupsSyncTags(self):
         """recupera i SyncTag di tutti i gruppi in cui è inserito"""
-        groupResourceNames= [ "contactGroups/"+m["contactGroupMembership"]["contactGroupId"]    for m in self.__body["memberships"]    if m["contactGroupMembership"]["contactGroupId"] not in Shared.group_id_not_to_sync ]
+        membershipTemp = [ m for m in self.__body["memberships"] if "contactGroupMembership" in m]
+        groupResourceNames= [ "contactGroups/"+m["contactGroupMembership"]["contactGroupId"]    for m in membershipTemp    if m["contactGroupMembership"]["contactGroupId"] not in Shared.group_id_not_to_sync ]
         groups=self.account.getGroupsByResourceNames(*groupResourceNames)
         groupSyncTags=[  g.syncTag   for g in groups]
         

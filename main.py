@@ -18,6 +18,8 @@ import argparse
 import json
 import pathlib
 
+import Google._patcher
+
 #creare una key di autenticazione ad un servizio 
     #vai qua -> https://console.cloud.google.com/projectselector2/iam-admin/serviceaccounts?supportedpurview=project&authuser=4
     #crea un progetto
@@ -64,6 +66,8 @@ def arguments():
 
 
 def main():
+    Google._patcher.patch()
+
     configFile="config.ini"
 
     args=arguments()
